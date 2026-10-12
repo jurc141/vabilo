@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="sl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Hej</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=Figtree:wght@400;600;700&display=swap">
+<style>
+:root{
+  --bg:#eef1f5; --card:#ffffff; --ink:#14181f; --muted:#5d6675; --line:#d9dee7;
+  --chip:#f3f5f8; --accent:#2b50e6; --accent-ink:#ffffff;
+  --display:"Bricolage Grotesque", system-ui, sans-serif; --body:"Figtree", system-ui, sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#11141a; --card:#1a1e26; --ink:#eef1f6; --muted:#9aa3b2; --line:#2c323d;
+  --chip:#222731; --accent:#7d95ff; --accent-ink:#0d1020; color-scheme:dark}}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.5;
+  padding-inline:16px;padding-block:calc(24px + env(safe-area-inset-top,0px)) calc(24px + env(safe-area-inset-bottom,0px));
+  display:flex;align-items:center;justify-content:center;overflow-x:hidden}
+.card{width:100%;max-width:500px;background:var(--card);border:1px solid var(--line);border-radius:20px;
+  padding:30px 24px;display:flex;flex-direction:column;gap:20px}
+h1,h2{font-family:var(--display);font-weight:800;margin:0;text-wrap:balance;line-height:1.1;letter-spacing:-.01em}
+h1{font-size:clamp(2rem,7vw,2.6rem)}
+h2{font-size:clamp(1.5rem,5vw,1.85rem)}
+p{margin:0}
+.muted{color:var(--muted)}
+.step-label{font-size:.78rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:700;font-variant-numeric:tabular-nums}
+.bar{height:4px;border-radius:4px;background:var(--chip);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);transition:width .3s ease}
+.ask-row{display:flex;gap:12px;align-items:center;min-height:56px;flex-wrap:wrap}
+button{font:inherit;cursor:pointer}
+.btn{border:0;border-radius:12px;padding:13px 26px;font-weight:700;font-size:1rem;transition:transform .15s ease}
+.btn:focus-visible,.chip:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.yes{background:var(--accent);color:var(--accent-ink);transform-origin:left center}
+.no{background:var(--chip);color:var(--ink);border:1px solid var(--line);white-space:nowrap;z-index:5;transition:left .2s ease,top .2s ease}
+.no.loose{position:fixed}
+.ghost{background:transparent;color:var(--muted);border:1px solid var(--line)}
+.nav{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.nav .yes{margin-left:auto}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
+.chip{background:var(--chip);color:var(--ink);border:2px solid transparent;border-radius:12px;padding:12px 14px;text-align:left;font-weight:600;min-width:0}
+.chip[aria-pressed="true"]{border-color:var(--accent);background:var(--card)}
+input,textarea{font:inherit;color:var(--ink);background:var(--chip);border:1px solid var(--line);border-radius:12px;padding:12px 14px;width:100%}
+textarea{min-height:100px;resize:vertical}
+label.small{font-size:.9rem;color:var(--muted)}
+.summary{display:grid;grid-template-columns:auto 1fr;gap:8px 16px;margin:0}
+.summary dt{color:var(--muted);font-weight:700;font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;padding-top:3px}
+.summary dd{margin:0;font-weight:600;min-width:0;overflow-wrap:anywhere}
+.fade{animation:fade .3s ease;display:flex;flex-direction:column;gap:18px}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<main class="card" id="app" aria-live="polite"></main>
+<script>
+(function(){
+// Odgovori gredo na ta mail prek FormSubmit (ob prvi oddaji pride potrditveni mail).
+const FORM_ENDPOINT = 'https://formsubmit.co/ajax/perparjure@gmail.com';
+
+const app = document.getElementById('app');
+const STEPS = [
+  {key:'datum', title:'Kdaj ti paše?', kind:'date'},
+  {key:'ura', title:'Ob kateri uri?', kind:'chips+time', options:['17:00','18:00','19:00','20:00']},
+  {key:'lokacija', title:'Kam greva?', kind:'chips', options:['Na večerjo','Piknik','Sprehod in pijača','Kino','Bowling ali biljard','Ti izberi']},
+  {key:'hrana', title:'Kaj bi jedla?', kind:'chips', options:['Pica','Suši','Burger','Testenine','Mehiška','Azijska','Domača hrana','Vseeno mi je']},
+  {key:'pijaca', title:'Kaj piješ?', kind:'chips', options:['Vino','Koktajl','Pivo','Kava','Brezalkoholno']},
+  {key:'opomba', title:'Še kaj?', kind:'text', hint:'Alergije, kaj ne ješ, karkoli. Lahko pustiš prazno.'}
+];
+const LABELS = {datum:'Datum',ura:'Ura',lokacija:'Kam',hrana:'Hrana',pijaca:'Pijača',opomba:'Opomba'};
+const answers = {};
+let step = -1, noCount = 0;
+
+const NO_TEXTS = ['Ne','Hmm, ne','Skoraj','Prepočasi','Ta gumb ne dela','Poskusi drugega','Ne bo šlo'];
+function renderAsk(){
+  app.innerHTML = `
+    <p class="step-label">Kratko vprašanje</p>
+    <h1>Greva kdaj ven?</h1>
+    <p class="muted">Samo ti in jaz, nekaj dobrega za jest in pijačo.</p>
+    <div class="ask-row">
+      <button class="btn yes" id="yes">Ja</button>
+      <button class="btn no" id="no">Ne</button>
+    </div>`;
+  const yes = document.getElementById('yes'), no = document.getElementById('no');
+  yes.onclick = ()=>{ step = 0; render(); };
+  const flee = e=>{ if(e){e.preventDefault();e.stopPropagation();} moveNo(no, yes); };
+  no.addEventListener('pointerdown', flee);
+  no.addEventListener('touchstart', flee, {passive:false});
+  no.addEventListener('click', flee);
+  no.addEventListener('focus', ()=>{ moveNo(no, yes); yes.focus(); });
+  document.onpointermove = e=>{
+    if(!document.body.contains(no)) return;
+    const r = no.getBoundingClientRect();
+    if(Math.hypot(e.clientX-(r.left+r.width/2), e.clientY-(r.top+r.height/2)) < Math.max(r.width,r.height)*0.75+40) moveNo(no, yes);
+  };
+}
+function moveNo(no, yes){
+  noCount++;
+  no.textContent = NO_TEXTS[Math.min(noCount, NO_TEXTS.length-1)];
+  yes.style.transform = `scale(${Math.min(1+noCount*0.05,1.4)})`;
+  if(!no.classList.contains('loose')){
+    const r = no.getBoundingClientRect();
+    no.classList.add('loose'); no.style.left = r.left+'px'; no.style.top = r.top+'px'; void no.offsetWidth;
+  }
+  const w = no.offsetWidth, h = no.offsetHeight, pad = 16, W = innerWidth, H = innerHeight;
+  const y = yes.getBoundingClientRect(), cur = no.getBoundingClientRect();
+  let x, t, n = 0;
+  do{
+    x = pad + Math.random()*Math.max(1, W-w-pad*2);
+    t = pad + Math.random()*Math.max(1, H-h-pad*2);
+  } while(++n < 40 && ((x < y.right+20 && x+w > y.left-20 && t < y.bottom+20 && t+h > y.top-20) || Math.hypot(x-cur.left, t-cur.top) < 140));
+  no.style.left = x+'px'; no.style.top = t+'px';
+}
+
+function render(){
+  document.onpointermove = null;
+  if(step < 0) return renderAsk();
+  if(step >= STEPS.length) return renderDone();
+  const s = STEPS[step], val = answers[s.key] || '';
+  let body = '';
+  if(s.kind === 'date'){
+    const min = new Date(Date.now()+864e5).toISOString().slice(0,10);
+    body = `<input type="date" id="f-datum" min="${min}" value="${val}" aria-label="Datum">`;
+  } else if(s.kind.startsWith('chips')){
+    const custom = s.options.includes(val) ? '' : val;
+    body = `<div class="chips" role="group" aria-label="${s.title}">` + s.options.map(o=>
+      `<button type="button" class="chip" data-v="${o}" aria-pressed="${val===o}">${o}</button>`).join('') + `</div>`;
+    body += s.kind === 'chips+time'
+      ? `<label class="small" for="f-ura">ali svoja ura</label><input type="time" id="f-ura" value="${custom}">`
+      : `<label class="small" for="f-${s.key}">ali kaj drugega</label><input type="text" id="f-${s.key}" value="${esc(custom)}" placeholder="Napiši …">`;
+  } else {
+    body = `<textarea id="f-opomba" placeholder="${s.hint}">${esc(val)}</textarea>`;
+  }
+  app.innerHTML = `
+    <div class="fade">
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <span class="step-label">${step+1} / ${STEPS.length}</span>
+        <div class="bar"><i style="width:${(step+1)/STEPS.length*100}%"></i></div>
+      </div>
+      <h2>${s.title}</h2>
+      ${body}
+      <div class="nav">
+        <button class="btn ghost" id="back">Nazaj</button>
+        <button class="btn yes" id="next">${step === STEPS.length-1 ? 'Pošlji' : 'Naprej'}</button>
+      </div>
+    </div>`;
+  const next = document.getElementById('next');
+  const sync = ()=>{ next.disabled = s.kind !== 'text' && !answers[s.key]; };
+  app.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{
+    answers[s.key] = c.dataset.v;
+    app.querySelectorAll('.chip').forEach(o=>o.setAttribute('aria-pressed', o===c));
+    const f = app.querySelector('input'); if(f) f.value = '';
+    sync();
+  });
+  const field = app.querySelector('input,textarea');
+  if(field) field.addEventListener('input', ()=>{
+    answers[s.key] = field.value.trim();
+    if(field.value) app.querySelectorAll('.chip').forEach(o=>o.setAttribute('aria-pressed', false));
+    sync();
+  });
+  document.getElementById('back').onclick = ()=>{ step--; render(); };
+  next.onclick = ()=>{ step++; render(); };
+  sync();
+}
+
+function fmtDate(v){
+  return v ? new Date(v+'T12:00:00').toLocaleDateString('sl-SI',{weekday:'long',day:'numeric',month:'long'}) : '';
+}
+function shown(k){ return k === 'datum' ? fmtDate(answers[k]) : answers[k]; }
+
+async function renderDone(){
+  const rows = STEPS.filter(s=>answers[s.key]).map(s=>`<dt>${LABELS[s.key]}</dt><dd>${esc(shown(s.key))}</dd>`).join('');
+  app.innerHTML = `
+    <div class="fade">
+      <h1>Dogovorjeno.</h1>
+      <dl class="summary">${rows}</dl>
+      <p class="muted" id="status">Pošiljam …</p>
+      <div class="nav">
+        <button class="btn ghost" id="edit">Popravi</button>
+        <button class="btn yes" id="copy" hidden>Kopiraj odgovore</button>
+      </div>
+    </div>`;
+  document.getElementById('edit').onclick = ()=>{ step = STEPS.length-1; render(); };
+  const status = document.getElementById('status'), copy = document.getElementById('copy');
+  const text = STEPS.filter(s=>answers[s.key]).map(s=>`${LABELS[s.key]}: ${shown(s.key)}`).join('\n');
+  copy.onclick = async()=>{
+    try{ await navigator.clipboard.writeText(text); copy.textContent = 'Kopirano'; }
+    catch(e){ status.style.whiteSpace = 'pre-line'; status.textContent = text; }
+  };
+  const payload = {_subject:'Odgovor na vabilo', _template:'table', _captcha:'false'};
+  STEPS.forEach(s=>{ payload[LABELS[s.key]] = shown(s.key) || '—'; });
+  payload['Kolikokrat je poskusila Ne'] = String(noCount);
+  try{
+    const r = await fetch(FORM_ENDPOINT, {method:'POST', headers:{'Content-Type':'application/json','Accept':'application/json'}, body:JSON.stringify(payload)});
+    if(!r.ok) throw new Error(r.status);
+    status.textContent = 'Poslano. Se slišiva.';
+  }catch(e){
+    status.textContent = 'Pošiljanje ni uspelo. Kopiraj odgovore in mi jih pošlji v sporočilu.';
+    copy.hidden = false;
+  }
+}
+
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+render();
+})();
+</script>
+</body>
+</html>
