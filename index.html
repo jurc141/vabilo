@@ -67,7 +67,7 @@ const FORM_ENDPOINT = 'https://formsubmit.co/ajax/perparjure@gmail.com';
 const app = document.getElementById('app');
 const STEPS = [
   {key:'datum', title:'Kdaj ti paše?', kind:'date'},
-  {key:'ura', title:'Ob kiri uri?', kind:'chips+time', options:['17:00','18:00','19:00','20:00']},
+  {key:'ura', title:'Ob keri uri?', kind:'chips+time', options:['17:00','18:00','19:00','20:00']},
   {key:'lokacija', title:'Kam greva?', kind:'chips', options:['Na večerjo','Piknik','Sprehod pa pijačka','Kino','Bowling al biljard','Ti zbereš']},
   {key:'hrana', title:'Kaj bi jedla?', kind:'chips', options:['Pica','Suši','Burger','Testenine','Mehiška','Azijska','Domača hrana','Vseen mi je']},
   {key:'pijaca', title:'Pa za pit?', kind:'chips', options:['Vinček','Koktajl','Pivo','Kavica','Brezalkoholno']},
@@ -81,7 +81,7 @@ const NO_TEXTS = ['Ne','Ziher?','Daj no','Mal prepočas','Ta gumb ne dela haha',
 function renderAsk(){
   app.innerHTML = `
     <p class="muted">Oj Sara, tole bo čist uradno haha!</p>
-    <h1>A bi šla z mano vn? 😄</h1>
+    <h1>Sepravi bi šla z mano vn? :)</h1>
     <div class="ask-row">
       <button class="btn yes" id="yes">Ja</button>
       <button class="btn no" id="no">Ne</button>
