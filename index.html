@@ -17,8 +17,6 @@
 @media (prefers-color-scheme: dark){:root{
   --bg:#161013; --card:#21171c; --ink:#f6eaee; --muted:#b39aa4; --line:#3a2830;
   --chip:#2b1f25; --accent:#f07ca0; --accent-ink:#2a0d18; color-scheme:dark}}
-#hearts{position:fixed;inset:0;pointer-events:none;z-index:20}
-.heart{color:var(--accent)}
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
 body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.5;
@@ -60,7 +58,6 @@ label.small{font-size:.9rem;color:var(--muted)}
 </style>
 </head>
 <body>
-<canvas id="hearts" aria-hidden="true"></canvas>
 <main class="card" id="app" aria-live="polite"></main>
 <script>
 (function(){
@@ -84,13 +81,13 @@ const NO_TEXTS = ['Ne','Ziher?','Daj no','Mal prepočas','Ta gumb ne dela haha',
 function renderAsk(){
   app.innerHTML = `
     <p class="muted">Oj Sara, tole bo čist uradno haha!</p>
-    <h1>A bi šla z mano vn? <span class="heart">♥</span></h1>
+    <h1>A bi šla z mano vn? 😄</h1>
     <div class="ask-row">
       <button class="btn yes" id="yes">Ja</button>
       <button class="btn no" id="no">Ne</button>
     </div>`;
   const yes = document.getElementById('yes'), no = document.getElementById('no');
-  yes.onclick = ()=>{ burst(); step = 0; render(); };
+  yes.onclick = ()=>{ step = 0; render(); };
   const flee = e=>{ if(e){e.preventDefault();e.stopPropagation();} moveNo(no, yes); };
   no.addEventListener('pointerdown', flee);
   no.addEventListener('touchstart', flee, {passive:false});
@@ -180,7 +177,7 @@ async function renderDone(){
   const rows = STEPS.filter(s=>answers[s.key]).map(s=>`<dt>${LABELS[s.key]}</dt><dd>${esc(shown(s.key))}</dd>`).join('');
   app.innerHTML = `
     <div class="fade">
-      <h1>Zmenjeno <span class="heart">♥</span></h1>
+      <h1>Zmenjeno 😁</h1>
       <p class="muted">Komi čakam.</p>
       <dl class="summary">${rows}</dl>
       <p class="muted" id="status">Pošiljam …</p>
@@ -210,27 +207,6 @@ async function renderDone(){
 }
 
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-
-// Nekaj srčkov ob kliku na Ja (brez pretiravanja).
-const cv = document.getElementById('hearts'), ctx = cv.getContext('2d');
-let parts = [];
-function size(){ cv.width = innerWidth*devicePixelRatio; cv.height = innerHeight*devicePixelRatio; }
-size(); addEventListener('resize', size);
-function burst(){
-  if(matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  const color = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
-  const start = !parts.length;
-  for(let i=0;i<22;i++) parts.push({x:innerWidth/2, y:innerHeight*0.55, vx:(Math.random()-.5)*9, vy:-Math.random()*9-3, s:14+Math.random()*12, life:1, color});
-  if(start) requestAnimationFrame(tick);
-}
-function tick(){
-  ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
-  ctx.clearRect(0,0,innerWidth,innerHeight);
-  parts.forEach(p=>{ p.x+=p.vx; p.y+=p.vy; p.vy+=.3; p.life-=.015;
-    ctx.globalAlpha = Math.max(p.life,0); ctx.fillStyle = p.color; ctx.font = p.s+'px sans-serif'; ctx.fillText('♥',p.x,p.y); });
-  parts = parts.filter(p=>p.life>0 && p.y<innerHeight+40);
-  if(parts.length) requestAnimationFrame(tick); else ctx.clearRect(0,0,innerWidth,innerHeight);
-}
 render();
 })();
 </script>
