@@ -9,14 +9,16 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=Figtree:wght@400;600;700&display=swap">
 <style>
 :root{
-  --bg:#eef1f5; --card:#ffffff; --ink:#14181f; --muted:#5d6675; --line:#d9dee7;
-  --chip:#f3f5f8; --accent:#2b50e6; --accent-ink:#ffffff;
+  --bg:#f6eef0; --card:#ffffff; --ink:#24161c; --muted:#76606a; --line:#ecdbe0;
+  --chip:#faf3f5; --accent:#c2416b; --accent-ink:#ffffff;
   --display:"Bricolage Grotesque", system-ui, sans-serif; --body:"Figtree", system-ui, sans-serif;
   color-scheme:light;
 }
 @media (prefers-color-scheme: dark){:root{
-  --bg:#11141a; --card:#1a1e26; --ink:#eef1f6; --muted:#9aa3b2; --line:#2c323d;
-  --chip:#222731; --accent:#7d95ff; --accent-ink:#0d1020; color-scheme:dark}}
+  --bg:#161013; --card:#21171c; --ink:#f6eaee; --muted:#b39aa4; --line:#3a2830;
+  --chip:#2b1f25; --accent:#f07ca0; --accent-ink:#2a0d18; color-scheme:dark}}
+#hearts{position:fixed;inset:0;pointer-events:none;z-index:20}
+.heart{color:var(--accent)}
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
 body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.5;
@@ -58,6 +60,7 @@ label.small{font-size:.9rem;color:var(--muted)}
 </style>
 </head>
 <body>
+<canvas id="hearts" aria-hidden="true"></canvas>
 <main class="card" id="app" aria-live="polite"></main>
 <script>
 (function(){
@@ -67,28 +70,28 @@ const FORM_ENDPOINT = 'https://formsubmit.co/ajax/perparjure@gmail.com';
 const app = document.getElementById('app');
 const STEPS = [
   {key:'datum', title:'Kdaj ti paše?', kind:'date'},
-  {key:'ura', title:'Ob kateri uri?', kind:'chips+time', options:['17:00','18:00','19:00','20:00']},
-  {key:'lokacija', title:'Kam greva?', kind:'chips', options:['Na večerjo','Piknik','Sprehod in pijača','Kino','Bowling ali biljard','Ti izberi']},
-  {key:'hrana', title:'Kaj bi jedla?', kind:'chips', options:['Pica','Suši','Burger','Testenine','Mehiška','Azijska','Domača hrana','Vseeno mi je']},
-  {key:'pijaca', title:'Kaj piješ?', kind:'chips', options:['Vino','Koktajl','Pivo','Kava','Brezalkoholno']},
-  {key:'opomba', title:'Še kaj?', kind:'text', hint:'Alergije, kaj ne ješ, karkoli. Lahko pustiš prazno.'}
+  {key:'ura', title:'Ob kiri uri?', kind:'chips+time', options:['17:00','18:00','19:00','20:00']},
+  {key:'lokacija', title:'Kam greva?', kind:'chips', options:['Na večerjo','Piknik','Sprehod pa pijačka','Kino','Bowling al biljard','Ti zbereš']},
+  {key:'hrana', title:'Kaj bi jedla?', kind:'chips', options:['Pica','Suši','Burger','Testenine','Mehiška','Azijska','Domača hrana','Vseen mi je']},
+  {key:'pijaca', title:'Pa za pit?', kind:'chips', options:['Vinček','Koktajl','Pivo','Kavica','Brezalkoholno']},
+  {key:'opomba', title:'Še kej?', kind:'text', hint:'Alergije, kej ne ješ, karkol. Lahk pustiš prazno.'}
 ];
 const LABELS = {datum:'Datum',ura:'Ura',lokacija:'Kam',hrana:'Hrana',pijaca:'Pijača',opomba:'Opomba'};
 const answers = {};
 let step = -1, noCount = 0;
 
-const NO_TEXTS = ['Ne','Hmm, ne','Skoraj','Prepočasi','Ta gumb ne dela','Poskusi drugega','Ne bo šlo'];
+const NO_TEXTS = ['Ne','Ziher?','Daj no','Mal prepočas','Ta gumb ne dela haha','Probaj unga druzga','Ne bo šlo 😏'];
 function renderAsk(){
   app.innerHTML = `
-    <p class="step-label">Kratko vprašanje</p>
-    <h1>Greva kdaj ven?</h1>
-    <p class="muted">Priznam, prvič delam kaj takega, tako da bo najbrž izpadlo malo čudno haha. Ampak resno: samo ti in jaz, nekaj dobrega za jest in pijačo.</p>
+    <p class="step-label">Ej, mal vprašanje <span class="heart">♥</span></p>
+    <h1>A bi šla z mano na zmenek?</h1>
+    <p class="muted">Priznam, tole delam prvič, tko da bo najbrž izpadl mal čudno haha. Ampak ja, res bi te rad peljal ven 🙂</p>
     <div class="ask-row">
       <button class="btn yes" id="yes">Ja</button>
       <button class="btn no" id="no">Ne</button>
     </div>`;
   const yes = document.getElementById('yes'), no = document.getElementById('no');
-  yes.onclick = ()=>{ step = 0; render(); };
+  yes.onclick = ()=>{ burst(); step = 0; render(); };
   const flee = e=>{ if(e){e.preventDefault();e.stopPropagation();} moveNo(no, yes); };
   no.addEventListener('pointerdown', flee);
   no.addEventListener('touchstart', flee, {passive:false});
@@ -132,8 +135,8 @@ function render(){
     body = `<div class="chips" role="group" aria-label="${s.title}">` + s.options.map(o=>
       `<button type="button" class="chip" data-v="${o}" aria-pressed="${val===o}">${o}</button>`).join('') + `</div>`;
     body += s.kind === 'chips+time'
-      ? `<label class="small" for="f-ura">ali svoja ura</label><input type="time" id="f-ura" value="${custom}">`
-      : `<label class="small" for="f-${s.key}">ali kaj drugega</label><input type="text" id="f-${s.key}" value="${esc(custom)}" placeholder="Napiši …">`;
+      ? `<label class="small" for="f-ura">al pa svoja ura</label><input type="time" id="f-ura" value="${custom}">`
+      : `<label class="small" for="f-${s.key}">al pa kej druzga</label><input type="text" id="f-${s.key}" value="${esc(custom)}" placeholder="Napiš …">`;
   } else {
     body = `<textarea id="f-opomba" placeholder="${s.hint}">${esc(val)}</textarea>`;
   }
@@ -178,19 +181,20 @@ async function renderDone(){
   const rows = STEPS.filter(s=>answers[s.key]).map(s=>`<dt>${LABELS[s.key]}</dt><dd>${esc(shown(s.key))}</dd>`).join('');
   app.innerHTML = `
     <div class="fade">
-      <h1>Dogovorjeno.</h1>
+      <h1>Zmenjeno <span class="heart">♥</span></h1>
+      <p class="muted">Komi čakam.</p>
       <dl class="summary">${rows}</dl>
       <p class="muted" id="status">Pošiljam …</p>
       <div class="nav">
         <button class="btn ghost" id="edit">Popravi</button>
-        <button class="btn yes" id="copy" hidden>Kopiraj odgovore</button>
+        <button class="btn yes" id="copy" hidden>Skopiraj odgovore</button>
       </div>
     </div>`;
   document.getElementById('edit').onclick = ()=>{ step = STEPS.length-1; render(); };
   const status = document.getElementById('status'), copy = document.getElementById('copy');
   const text = STEPS.filter(s=>answers[s.key]).map(s=>`${LABELS[s.key]}: ${shown(s.key)}`).join('\n');
   copy.onclick = async()=>{
-    try{ await navigator.clipboard.writeText(text); copy.textContent = 'Kopirano'; }
+    try{ await navigator.clipboard.writeText(text); copy.textContent = 'Skopiran ✓'; }
     catch(e){ status.style.whiteSpace = 'pre-line'; status.textContent = text; }
   };
   const payload = {_subject:'Odgovor na vabilo', _template:'table', _captcha:'false'};
@@ -199,14 +203,35 @@ async function renderDone(){
   try{
     const r = await fetch(FORM_ENDPOINT, {method:'POST', headers:{'Content-Type':'application/json','Accept':'application/json'}, body:JSON.stringify(payload)});
     if(!r.ok) throw new Error(r.status);
-    status.textContent = 'Poslano. Se slišiva.';
+    status.textContent = 'Poslan. Se vidva 🙂';
   }catch(e){
-    status.textContent = 'Pošiljanje ni uspelo. Kopiraj odgovore in mi jih pošlji v sporočilu.';
+    status.textContent = 'Neki ni ratal. Skopiraj odgovore pa mi jih pošl v sporočilu.';
     copy.hidden = false;
   }
 }
 
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+
+// Nekaj srčkov ob kliku na Ja (brez pretiravanja).
+const cv = document.getElementById('hearts'), ctx = cv.getContext('2d');
+let parts = [];
+function size(){ cv.width = innerWidth*devicePixelRatio; cv.height = innerHeight*devicePixelRatio; }
+size(); addEventListener('resize', size);
+function burst(){
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const color = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+  const start = !parts.length;
+  for(let i=0;i<22;i++) parts.push({x:innerWidth/2, y:innerHeight*0.55, vx:(Math.random()-.5)*9, vy:-Math.random()*9-3, s:14+Math.random()*12, life:1, color});
+  if(start) requestAnimationFrame(tick);
+}
+function tick(){
+  ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+  ctx.clearRect(0,0,innerWidth,innerHeight);
+  parts.forEach(p=>{ p.x+=p.vx; p.y+=p.vy; p.vy+=.3; p.life-=.015;
+    ctx.globalAlpha = Math.max(p.life,0); ctx.fillStyle = p.color; ctx.font = p.s+'px sans-serif'; ctx.fillText('♥',p.x,p.y); });
+  parts = parts.filter(p=>p.life>0 && p.y<innerHeight+40);
+  if(parts.length) requestAnimationFrame(tick); else ctx.clearRect(0,0,innerWidth,innerHeight);
+}
 render();
 })();
 </script>
